@@ -18,7 +18,7 @@ public class LinkedList<T> implements List<T> {
 			this.data = data;
 		}
 	}
-	// O[N]
+	// O[1]
 	@Override
 	public boolean add(T obj) {
 		Node<T> node = new Node<>(obj);
@@ -36,7 +36,7 @@ public class LinkedList<T> implements List<T> {
 		}
 		return res;
 	}
-	// O[1]
+	// O[N]
 	@Override
 	public boolean contains(T pattern) {
 		return indexOf(pattern) > -1;
@@ -74,13 +74,10 @@ public class LinkedList<T> implements List<T> {
 	// O[1]
 	@Override
 	public T get(int index) {
-		if(index < 0 || index >= size) {
-			throw new IndexOutOfBoundsException();
-		}
-		Node<T> node = getNode(index);
-		return node.data;
+		List.checkIndex(index, size, true);
+		return getNode(index).data;
 	}
-	//O[1]
+	//O[N]
 	@Override
 	public void add(int index, T obj) {
 		List.checkIndex(index, size, false);
@@ -133,22 +130,25 @@ public class LinkedList<T> implements List<T> {
 	private Node<T> getNode(int index) {
 		return index < size / 2 ? getNodeFromHead(index) : getNodeFromTail(index);
 	}
+
 	//O[1]
 	private Node<T> getNodeFromTail(int index) {
 		Node<T> current = tail;
-		for (int i = size - 1; i > index; i--) {
+		for(int i = size - 1; i > index; i--) {
 			current = current.prev;
 		}
 		return current;
 	}
+
 	//O[1]
 	private Node<T> getNodeFromHead(int index) {
 		Node<T> current = head;
-		for (int i = 0; i < index; i++) {
+		for(int i = 0; i < index; i++) {
 			current = current.next;
 		}
 		return current;
 	}
+
 	//O[N]
 	private void addNode(int index, Node<T> node) {
 		if (index == 0) {

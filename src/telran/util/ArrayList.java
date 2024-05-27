@@ -46,9 +46,9 @@ public class ArrayList<T> implements List<T> {
 	}
 
 	private void allocate() {
-		array = Arrays.copyOf(array, array.length * 2);
-		
+		array = Arrays.copyOf(array, array.length * 2);	
 	}
+	
 	@Override
 	public boolean remove(T pattern) {
 		int index = indexOf(pattern);
