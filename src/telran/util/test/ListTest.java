@@ -76,6 +76,5 @@ public abstract class ListTest extends CollectionTest {
 		list.add(0, null);
 		assertEquals(0, list.indexOf(null));
 		assertEquals(list.size() - 1, list.lastIndexOf(null));
-		
 	}
 }
