@@ -4,7 +4,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public class TreeSet<T> implements SortedSet<T> {
+public class TreeSet<T> extends AbstractCollection<T> implements SortedSet<T> {
 private static class Node<T> {
 	T data;
 	Node<T> parent;
@@ -17,6 +17,7 @@ private static class Node<T> {
 }
 private class TreeSetIterator implements Iterator<T> {
 	Node<T> current = getLeastFrom(root);
+	Node<T> prev;
 	@Override
 	public boolean hasNext() {
 		
@@ -28,16 +29,30 @@ private class TreeSetIterator implements Iterator<T> {
 		if(!hasNext()) {
 			throw new NoSuchElementException();
 		}
-		T res = current.data;
+		prev = current;
 		current = getCurrent(current);
-		return res;
+		return prev.data;
+	}
+	@Override
+	public void remove() {
+		if(prev == null) {
+			throw new IllegalStateException();
+		}
+		removeNode(prev);
+		prev = null;
 	}
 	
 }
+private static final int DEFAULT_SPACES_PER_LEVEL = 2;
 	Node<T> root;
-	int size;
-
 	private Comparator<T> comp;
+	private int spacesPerLevel = DEFAULT_SPACES_PER_LEVEL;
+	public int getSpacesPerLevel() {
+		return spacesPerLevel;
+	}
+	public void setSpacesPerLevel(int spacesPerLevel) {
+		this.spacesPerLevel = spacesPerLevel;
+	}
 	public TreeSet(Comparator<T> comp) {
 		this.comp = comp;
 	}
@@ -45,10 +60,10 @@ private class TreeSetIterator implements Iterator<T> {
 	public TreeSet() {
 		this((Comparator<T>)Comparator.naturalOrder());
 	}
-
 	@Override
 	public T get(T pattern) {
-		Node<T> node = getNode(pattern);	
+		Node<T> node = getNode(pattern);
+		
 		return node == null ? null : node.data;
 	}
 
@@ -60,12 +75,12 @@ private class TreeSetIterator implements Iterator<T> {
 		}
 		return res;
 	}
-	
+
 	private Node<T> getParentOrNode(T pattern) {
 		Node<T> current = root;
 		Node<T> parent = null;
 		int compRes = 0;
-		while (current != null && (compRes = comp.compare(pattern, current.data)) != 0) {
+		while(current != null && (compRes = comp.compare(pattern, current.data)) != 0) {
 			parent = current;
 			current = compRes > 0 ? current.right : current.left;
 		}
@@ -73,29 +88,28 @@ private class TreeSetIterator implements Iterator<T> {
 	}
 
 	public Node<T> getCurrent(Node<T> current) {
-		// TODO
 		//Algorithm see on the board
-		return current.right != null ? getLeastFrom(current.right) 
-				: getFirstGreaterParent(current);
+		return current.right != null ? getLeastFrom(current.right) :
+			getFirstGreaterParent(current);
 	}
 
 	private Node<T> getFirstGreaterParent(Node<T> current) {
-		// TODO
-		while(current.parent != null && current.parent.left != current) {
+		Node<T> parent = current.parent;
+		while(parent != null && parent.right == current) {
 			current = current.parent;
+			parent = current.parent;
 		}
-		return current.parent;
+		return parent;
 	}
-
 	private Node<T> getLeastFrom(Node<T> node) {
 		if (node != null) {
-			while (node.left != null) {
+			
+			while(node.left != null) {
 				node = node.left;
 			}
 		}
 		return node;
 	}
-
 
 	@Override
 	public boolean add(T obj) {
@@ -123,7 +137,8 @@ private class TreeSetIterator implements Iterator<T> {
 		} else {
 			parent.left = node;
 		}
-		node.parent = parent;		
+		node.parent = parent;
+		
 	}
 
 	private Node<T> getParent(Node<T> node) {
@@ -132,9 +147,9 @@ private class TreeSetIterator implements Iterator<T> {
 	}
 
 	private void addRoot(Node<T> node) {
-		root = node;	
+		root = node;
+		
 	}
-
 
 	@Override
 	public boolean remove(T pattern) {
@@ -148,56 +163,49 @@ private class TreeSetIterator implements Iterator<T> {
 	}
 
 	private void removeNode(Node<T> node) {
-		if(node.left == null && node.right == null) {
-			removeWithoutLeftAndRight(node);
-		} else if(node.left != null && node.right != null) {
-			removeWithBothChild(node);
+		if(node.left != null && node.right != null) {
+			removeJunction(node);
 		} else {
-			removeWithOneChild(node);
+			removeNonJunction(node);
 		}
+		
 		size--;
 	}
 
-	private void removeWithBothChild(Node<T> node) {
-		Node<T> successor = getLeastFrom(node.right);
-		node.data = successor.data;
-		removeNode(successor);
+	private void setNulls(Node<T> node) {
+		node.data = null;
+		node.parent = node.left = node.right = null;
+		
 	}
-
-	private void removeWithOneChild(Node<T> node) {
+	private void removeJunction(Node<T> node) {
+		Node<T> substitute = getGreatestFrom(node.left);
+		node.data = substitute.data;
+		removeNonJunction(substitute);
+		
+	}
+	private void removeNonJunction(Node<T> node) {
+		Node<T> parent = node.parent;
 		Node<T> child = node.left != null ? node.left : node.right;
-		if(node.parent == null) {
-			root = child;
-		} else if(node.parent.left == node) {
-			node.parent.left = child;
+		if(parent == null) {
+			root = child; //actual root removing
+		} else if(node == parent.left) {
+			parent.left = child;
 		} else {
-			node.parent.right = child;
+			parent.right = child;
 		}
-		child.parent = node.parent;
+		if(child != null) {
+			child.parent = parent;
+		}
+		setNulls(node);
+		
 	}
-
-	private void removeWithoutLeftAndRight(Node<T> node) {
-		if(node.parent == null) {
-			root = null;
-		} else if(node.parent.left == node) {
-			node.parent.left = null;
-		} else {
-			node.parent.right = null;
-		}		
-	}
-
 	@Override
-	public boolean contains(T pattern) {	
+	public boolean contains(T pattern) {		
 		return getNode(pattern) != null;
 	}
-	
-	@Override
-	public int size() {
-		return size;
-	}
 
 	@Override
-	public Iterator<T> iterator() {	
+	public Iterator<T> iterator() {		
 		return new TreeSetIterator();
 	}
 
@@ -207,11 +215,11 @@ private class TreeSetIterator implements Iterator<T> {
 	}
 
 	@Override
-	public T last() {	
-		return root == null ? null : getGreatesFrom(root).data;
+	public T last() {		
+		return root == null ? null : getGreatestFrom(root).data;
 	}
 
-	private Node<T> getGreatesFrom(Node<T> node) {
+	private Node<T> getGreatestFrom(Node<T> node) {
 		if(node != null) {
 			while(node.right != null) {
 				node = node.right;
@@ -219,4 +227,139 @@ private class TreeSetIterator implements Iterator<T> {
 		}
 		return node;
 	}
+
+	@Override
+	/**
+	 * Returns the greatest element in this set less than or equal to the given
+	 * element, or null if there is no such element
+	 */
+	public T floor(T key) {
+		return getBoundenElement(key, true);
+	}
+
+	@Override
+	/**
+	 * Returns the least element in this set greater than or equal to the given
+	 * element, or null if there is no such element
+	 */
+	public T ceiling(T key) {
+		return getBoundenElement(key, false);
+	}
+
+	private T getBoundenElement(T key, boolean isFloor) {
+		Node<T> current = root;
+		Node<T> boundenElement = null;
+
+		while (current != null) {
+			int cmp = comp.compare(key, current.data);
+			if (cmp == 0) {
+				return current.data;
+			} else if ((isFloor && cmp > 0) || (!isFloor && cmp < 0)) {
+				boundenElement = current;
+				current = isFloor ? current.right : current.left;
+			} else {
+				current = isFloor ? current.left : current.right;
+			}
+		}
+		return boundenElement == null ? null : boundenElement.data;
+	}
+
+	/**
+	 * display tree in the following form: 
+	 * -20
+	 *    10
+	 *       1
+	 *         -5
+	 *       100
+	 */
+	public void displayRootChildren() {
+		displayRootChildren(root, 0);
+	}
+
+	private void displayRootChildren(Node<T> tmpRoot, int level) {
+		if (tmpRoot != null) {
+			displayRoot(tmpRoot, level);
+			displayRootChildren(tmpRoot.left, level + 1);
+			displayRootChildren(tmpRoot.right, level + 1);
+		}
+	}
+
+	/********************************************
+	 * 
+	 * conversion of tree so that iterating has been in the inversive order
+	 */
+	public void treeInversion() {
+		treeInversion(root);
+	}
+
+	private void treeInversion(Node<T> node) {
+		if (node != null) {
+			Node<T> tmp = node.left;
+	        node.left = node.right;
+	        node.right = tmp;
+			treeInversion(node.left);
+			treeInversion(node.right);
+		}	
+	}
+
+	/*
+	 * displays tree in the following form 100 10 1 -5 -20
+	 */
+	public void displayTreeRotated() {
+		displayTreeRotated(root, 1);
+	}
+
+	private void displayTreeRotated(Node<T> tmpRoot, int level) {
+		if (tmpRoot != null) {
+			displayTreeRotated(tmpRoot.right, level + 1);
+			displayRoot(tmpRoot, level);
+			displayTreeRotated(tmpRoot.left, level + 1);
+		}
+	}
+
+	private void displayRoot(Node<T> tmpRoot, int level) {
+		System.out.printf("%s", " ".repeat(level * spacesPerLevel));
+		System.out.println(tmpRoot.data);
+	}
+
+	/**
+	 * 
+	 * @return number of leaves (leaf - node with both left and right nulls)
+	 */
+	public int width() {
+		return width(root);
+	}
+
+	private int width(Node<T> tmpRoot) {
+		int res = 0;
+		if (tmpRoot != null) {
+			if (tmpRoot.left == null && tmpRoot.right == null) {
+				res = 1;
+			} else {
+				res = width(tmpRoot.left) + width(tmpRoot.right);
+			}
+		}
+		return res;
+	}
+
+	/****************************************/
+	/**
+	 * 
+	 * @return number of the nodes of the longest line
+	 */
+	public int height() {
+
+		return height(root);
+	}
+
+	private int height(Node<T> tmpRoot) {
+		int res = 0;
+		if (tmpRoot != null) {
+			int heightLeft = height(tmpRoot.left);
+			int heightRight = height(tmpRoot.right);
+			res = Math.max(heightLeft, heightRight) + 1;
+		}
+		return res;
+	}
+
 }
